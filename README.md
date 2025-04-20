@@ -18,58 +18,54 @@ This Bash script provides an interactive TUI (dialog-based) interface for backin
 
 ## Requirements
 
-- Bash
-- `dialog` package (for TUI)
-- Docker
+- Linux system (tested on Debian/Ubuntu)
+- Docker installed and running
+- Bash shell
 - `curl`
-
+- `dialog` package installed  
+  Install with:  
+```
+ 
+ sudo apt update && sudo apt install dialog curl
+ 
+ ```
 ---
 
 ## Installation
 
-1. **Download the script** and place it in your desired directory, e.g. `/opt/docker-backups/backup.sh`
-2. **Make it executable:**
+1. **Download the script** and place it in your desired directory, e.g. `/usr/local/sbin/docker-backup/backup.sh`
 
 ```bash
-chmod +x /opt/docker-backups/backup.sh
+ mkdir -p /usr/local/sbin/docker-backup/
+ cd /usr/local/sbin/docker-backup/
+ wget https://raw.githubusercontent.com/kyzorr/docker-volume-backup/refs/heads/main/backup.sh
+ wget https://raw.githubusercontent.com/kyzorr/docker-volume-backup/refs/heads/main/settings.ini
+ chmod +x backup.sh
 ```
 
-3. **Create a `settings.ini` file** in the same directory.
-See below for an example.
-
----
-
-## Example `settings.ini`
-
-```ini
-BACKUP_DIR=/opt/docker-backups
-LOG_FILE=/opt/docker-backups/backup.log
-RETENTION_DAYS=7
-EXCLUDE_VOLUMES=
-
-NOTIFY_SYSTEM=gotify          # Options: none, ntfy, gotify
-
-# ntfy settings
-NTFY_URL=https://ntfy.example.com/your-topic
-NTFY_USER=youruser
-NTFY_PASS=yourpassword
-
-# gotify settings
-GOTIFY_URL=https://gotify.example.com/message
-GOTIFY_TOKEN=your_app_token
-GOTIFY_PRIORITY_OK=3
-GOTIFY_PRIORITY_ERROR=9
-```
-
+ 2. **(Optional) Create a system-wide alias**
+ 
+ ```
+ sudo ln -s /usr/local/sbin/docker-backup/backup.sh /usr/local/bin/backup-docker
+ ```
+ 
+ Now you can run the script as `backup-docker` from anywhere.
+ 
 ---
 
 ## Usage
 
-Run the script:
+Run the script with root privileges (required for Docker access):
+ 
+ ```bash
+ 
+ sudo /usr/local/sbin/docker-backup/backup_gui.sh
 
-```bash
-./backup.sh
-```
+ ```
+ # or, if you created the alias:
+ ```bash
+ sudo backup-docker
+ ```
 
 You will see a dialog-based menu with options for backup, restore, options, and settings.
 
