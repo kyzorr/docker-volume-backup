@@ -33,6 +33,9 @@ send_notification() {
 
 backup_volumes() {
     mapfile -t VOLUMES < <(docker volume ls --format "{{.Name}}")
+    SUCCESSFUL=()
+    ERROR_OCCURRED=0
+
     for VOLUME in "${VOLUMES[@]}"; do
         if [[ ",$EXCLUDE_VOLUMES," == *",$VOLUME,"* ]]; then
             log "Skipping volume: $VOLUME"
@@ -41,11 +44,24 @@ backup_volumes() {
         TIMESTAMP=$(date +%Y%m%d_%H%M%S)
         BACKUP_FILE="${BACKUP_DIR}/${VOLUME}_${TIMESTAMP}.tar.gz"
         log "Backing up $VOLUME -> $BACKUP_FILE"
-        docker run --rm -v "$VOLUME":/data -v "$BACKUP_DIR":/backup alpine \
-            tar czf "/backup/${VOLUME}_${TIMESTAMP}.tar.gz" -C /data . \
-            && { log "Success: $VOLUME"; send_notification "Backup successful: $VOLUME" "ok"; } \
-            || { log "Error: $VOLUME"; send_notification "Backup FAILED: $VOLUME" "error"; }
+        if docker run --rm -v "$VOLUME":/data -v "$BACKUP_DIR":/backup alpine \
+            tar czf "/backup/${VOLUME}_${TIMESTAMP}.tar.gz" -C /data .; then
+            log "Success: $VOLUME"
+            SUCCESSFUL+=("$VOLUME")
+        else
+            log "Error: $VOLUME"
+            send_notification "Backup FAILED: $VOLUME" "error"
+            ERROR_OCCURRED=1
+        fi
     done
+
+    if [ "$ERROR_OCCURRED" -eq 0 ]; then
+        if [[ "$NOTIFY_ON_SUCCESS" == "true" ]]; then
+            send_notification "All backups successful: ${SUCCESSFUL[*]}" "ok"
+        fi
+    fi
+
+
     dialog --msgbox "Backup of all volumes completed!" 7 40
 }
 
@@ -345,17 +361,45 @@ notification_system_menu() {
         source <(grep = "$INI_FILE" | sed 's/ *= */=/g')
     done
 }
+notify_on_success_menu() {
+    while true; do
+        dialog --clear --backtitle "Docker Volume Backup GUI" \
+            --title "Notify on Success" \
+            --menu "Send notification if all backups are successful?" 10 60 2 \
+            1 "Enable" \
+            2 "Disable" \
+            0 "Back" 2>menu_choice.tmp
+
+        ret=$?
+        if [ $ret -ne 0 ]; then rm -f menu_choice.tmp; break; fi
+        CHOICE=$(<menu_choice.tmp)
+        rm -f menu_choice.tmp
+
+        case "$CHOICE" in
+            1)
+                sed -i "s|^NOTIFY_ON_SUCCESS=.*|NOTIFY_ON_SUCCESS=true|" "$INI_FILE"
+                ;;
+            2)
+                sed -i "s|^NOTIFY_ON_SUCCESS=.*|NOTIFY_ON_SUCCESS=false|" "$INI_FILE"
+                ;;
+            0) break ;;
+        esac
+        source <(grep = "$INI_FILE" | sed 's/ *= */=/g')
+    done
+}
+
 
 settings_menu() {
     while true; do
         dialog --clear --backtitle "Docker Volume Backup GUI" \
             --title "Settings" \
-            --menu "Please select an option:" 18 60 6 \
+            --menu "Please select an option:" 20 60 7 \
             1 "General Settings" \
             2 "Notification System (Select)" \
             3 "ntfy Settings" \
             4 "Gotify Settings" \
-            5 "View Settings" \
+            5 "Notify on Success" \
+            6 "View Settings" \
             0 "Back" 2>menu_choice.tmp
 
         ret=$?
@@ -368,11 +412,13 @@ settings_menu() {
             2) notification_system_menu ;;
             3) ntfy_settings_menu ;;
             4) gotify_settings_menu ;;
-            5) show_settings ;;
+            5) notify_on_success_menu ;;
+            6) show_settings ;;
             0) break ;;
         esac
     done
 }
+
 
 backup_menu() {
     while true; do
