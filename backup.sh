@@ -1,6 +1,12 @@
 #!/bin/bash
+SCRIPT_PATH="$(readlink -f "$0")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+INI_FILE="$SCRIPT_DIR/settings.ini"
+if [ ! -f "$INI_FILE" ]; then
+  echo "Error: settings.ini not found!"
+  exit 1
+fi
 
-INI_FILE="$(dirname "$0")/settings.ini"
 source <(grep = "$INI_FILE" | sed 's/ *= */=/g')
 
 log() {
