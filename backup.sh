@@ -63,7 +63,9 @@ backup_volumes() {
 
     if [ "$ERROR_OCCURRED" -eq 0 ]; then
         if [[ "$NOTIFY_ON_SUCCESS" == "true" ]]; then
-            send_notification "All backups successful: ${SUCCESSFUL[*]}" "ok"
+            # Volumes als Liste mit Zeilenumbrüchen
+            VOLUME_LIST=$(printf "%s\n" "${SUCCESSFUL[@]}")
+            send_notification "All backups successful:\n$VOLUME_LIST" "ok"
         fi
     fi
 
